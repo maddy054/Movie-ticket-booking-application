@@ -1,0 +1,32 @@
+@charset "UTF-8";
+
+.error-image{
+	height: 600px;
+	margin:50px 0  0 100px;
+	width: auto;	
+}
+
+.error-mess{
+	text-align: center;
+}
+
+.flex-center{
+	display: flex;
+
+	justify-content: center;
+}
+
+
+.error-container{
+	text-align: center;
+	font-size: 25px;
+	padding: 20px;
+	font-style:italic;
+	width:600px;
+	background-color: #ffcdcd;
+	border-left: 10px solid #ff7c7c;
+}
+.error{
+	height: 800px;
+	margin-left: 100px;
+}
