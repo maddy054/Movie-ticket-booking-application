@@ -34,4 +34,11 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.wst.jsdt.core.jsNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>src/main/webapp/WEB-INF/lib/jackson-mapper-asl-1.9.12.jar</name>
+			<type>1</type>
+			<location>/Users/madhavan-21454/Downloads/jackson-mapper-asl-1.9.12.jar</location>
+		</link>
+	</linkedResources>
 </projectDescription>

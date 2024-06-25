@@ -11,7 +11,7 @@ import java.util.logging.SimpleFormatter;
 
 public class CustomLogger {
 
-	private static String  path = "/Users/madhavan-21454/ZIDE/zmovizz/logs/";
+	private static String  path = "/Users/madhavan-21454/git/repository/zmovizz/logs/";
 	
 	public static void log(Level level, String record) {	
 		try {
@@ -19,7 +19,6 @@ public class CustomLogger {
 			
 			LocalDate date = LocalDate.now();
 			String fileName = date+"zmovizz.log";
-
 
 			FileHandler	handler = new FileHandler(path+fileName,true);
 			handler.setFormatter(new SimpleFormatter());

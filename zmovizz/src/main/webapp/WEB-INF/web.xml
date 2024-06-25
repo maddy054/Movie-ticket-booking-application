@@ -17,5 +17,16 @@
             <error-code>500</error-code>
             <location>/html/500.html</location>
         </error-page>
+        
+        <servlet>
+			
+			<servlet-name>MovieServlet</servlet-name>
+			<servlet-class>com.zmovizz.servlet.MovieServlet</servlet-class>
+		</servlet>
+		<servlet-mapping>
+			<servlet-name>MovieServlet</servlet-name>
+			<url-pattern>/api/v1/*</url-pattern>
+		</servlet-mapping>
+		
 </web-app>
 

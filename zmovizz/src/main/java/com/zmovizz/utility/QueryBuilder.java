@@ -1,5 +1,4 @@
-
-package com.zmovizz.utility;
+	package com.zmovizz.utility;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -10,8 +9,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.zmovizz.exceptions.MovieException;
-
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -21,12 +18,12 @@ public class QueryBuilder {
 	private String url = "jdbc:postgresql://localhost:5432/zmovizz";
 	private String userName = "postgres";
 	private String password = "";
-    private String tableName;
+    private String[] tableName;
     String driverClassName = "org.postgresql.Driver";
     
     private List<Integer> usedColumns;
-    private List<Integer> whereConditions;
-    private boolean isForLikeOperator = false;
+    private List<Integer> whereConditions; 
+    private List<Integer> joinColumn ;
     private boolean isLimit = false;
     private boolean isOffset = false;
     private List<Integer> between;
@@ -53,15 +50,17 @@ public class QueryBuilder {
     	this.password = password;
     }
 
-    public QueryBuilder(String tableName) {
+    public QueryBuilder(String... tableName) {
         this.tableName = tableName;
         this.usedColumns = new ArrayList<>();
         this.whereConditions = new ArrayList<>();
         this.between = new ArrayList<>();
+        this.joinColumn = new ArrayList<>();
         
     }
 
     public QueryBuilder column(int... columns) {
+    	
         for (int column : columns) {
         	usedColumns.add(column);
         }
@@ -100,6 +99,12 @@ public class QueryBuilder {
 		return this;
 	}
 
+	public QueryBuilder join(int... columns) {
+		for(int column : columns) {
+			joinColumn.add(column);
+    	}
+		return this;
+	}
   
     public String buildSelect() throws SQLException {
         StringBuilder query = new StringBuilder("SELECT ");
@@ -109,11 +114,11 @@ public class QueryBuilder {
             query.append("*");
         } else {
         	if(isNeedCount) {
-        		query.append(" COUNT(").append(getColumnNames(usedColumns).get(0)).append(")");
+        		query.append(" COUNT(").append(getColumnNames(tableName[0],usedColumns,false).get(0)).append(")");
         		
         	}else {
         	
-        	 List<String> selectColumns = getColumnNames(usedColumns);
+        	 List<String> selectColumns = getColumnNames(tableName[0], usedColumns,false);
         	 
             for (int i = 0; i < selectColumns.size(); i++) {
                 query.append(selectColumns.get(i));
@@ -123,28 +128,14 @@ public class QueryBuilder {
             }
         }
         }
-        query.append(" FROM ").append(tableName);
-        
-        if (!whereConditions.isEmpty()) {
-            query.append(" WHERE ");
-            for (int i = 0; i < getColumnNames(whereConditions).size(); i++) {
-                query.append(getColumnNames(whereConditions).get(i)).append(" = ? ");
-                
-                if (i < whereConditions.size() - 1) {
-                    query.append(" AND ");
-                }
-            }
+        query.append(" FROM ").append(tableName[0]);
+        for(int i=1;i<tableName.length;i++) {
+        	query.append(" join "+tableName[i]).append(" on ");
+        	query.append(tableName[i-1]).append(".").append(getColumnNames(tableName[i-1],joinColumn.subList(i-1, i), false).get(0)).append(" = ");
+        	query.append(tableName[i]).append(".").append(getColumnNames(tableName[i],joinColumn.subList(i, i+1), false).get(0));
         }
-        if(!between.isEmpty()) {
-        	
-        	query.append(" AND ").append(getColumnNames(between).get(0)).append(" BETWEEN ? AND ? ");
-        }
-        if(isLimit) {
-        	query.append(" LIMIT ? ");
-        }
-        if(isOffset) {
-        	query.append(" OFFSET ? ");
-        }
+     
+       buildWhere(query);
         System.out.println(query);
 
         return query.toString();
@@ -153,7 +144,8 @@ public class QueryBuilder {
     
     public String buildUpdate() throws SQLException {
         StringBuilder query = new StringBuilder("UPDATE ").append(tableName).append(" SET ");
-        List<String> updateColumns = getColumnNames(this.usedColumns);
+        
+        List<String> updateColumns = getColumnNames(tableName[0],usedColumns,true);
         
         for (int i = 0; i < updateColumns.size(); i++) {
             query.append(updateColumns.get(i)).append(" = ?");
@@ -166,7 +158,7 @@ public class QueryBuilder {
         	
             query.append(" WHERE ");
             for (int i = 0; i < whereConditions.size(); i++) {
-                query.append(getColumnNames(whereConditions).get(i)).append(" = ? ");
+                query.append(getColumnNames(tableName[0],whereConditions,false).get(i)).append(" = ? ");
                 if (i < whereConditions.size() - 1) {
                     query.append(" AND ");
                 }
@@ -175,14 +167,42 @@ public class QueryBuilder {
         System.out.println(query);
         return query.toString();
     }
-
+    
+    
+    private void buildWhere(StringBuilder query) throws SQLException {
+    	 
+        if (!whereConditions.isEmpty()) {
+            query.append(" WHERE ");
+            for (int i = 0; i < getColumnNames(tableName[0],whereConditions,false).size(); i++) {
+                query.append(getColumnNames(tableName[0],whereConditions,false).get(i)).append(" = ? ");
+                
+                if (i < whereConditions.size() - 1) {
+                    query.append(" AND ");
+                }
+            }
+        }
+        if(!between.isEmpty()) {
+        	
+        	query.append(" AND ").append(getColumnNames(tableName[0],between,false).get(0)).append(" BETWEEN ? AND ? ");
+        }
+        if(isLimit) {
+        	query.append(" LIMIT ? ");
+        }
+        if(isOffset) {
+        	query.append(" OFFSET ? ");
+        }
+    	
+    }
+    
+    
+    
+    
     public String buildInsert() throws SQLException {
         StringBuilder query = new StringBuilder("INSERT INTO ").append(tableName);
 
-        List<String> insertColumns = getColumnNames(usedColumns);
-      
-        if(!insertColumns.isEmpty()) {
-        	query.append(" ( ");
+        List<String> insertColumns = getColumnNames(tableName[0],usedColumns,true);
+     
+        	query.append(" (");
         	
         	 for (int i = 0; i < insertColumns.size(); i++) {
                  query.append(insertColumns.get(i));
@@ -191,7 +211,7 @@ public class QueryBuilder {
                  }
              }
         	 query.append(") ");
-        }
+    
  
         query.append(" VALUES (");
 
@@ -208,17 +228,22 @@ public class QueryBuilder {
         return query.toString();
     }
     
-    private <V> List<String> getColumnNames(List<V> column) throws SQLException {
+    private <V> List<String> getColumnNames(String table,List<V> column,boolean removePk) throws SQLException {
     	
     	List<String> columnNames = new ArrayList<String>();
         try(Connection connection = getConnection()) {
         	DatabaseMetaData metaData = connection.getMetaData();
-          
-        	 try (ResultSet rs = metaData.getColumns("zmovizz", null, tableName, null)) {
+        
+        	 try (ResultSet rs = metaData.getColumns("zmovizz", null, table, null)) {
         		 
+       
         		 if(column.isEmpty()) {
         			 while(rs.next()) {
-        				 columnNames.add(rs.getString("COLUMN_NAME"));
+        				
+        				 if(!(removePk && (rs.getString("TYPE_NAME").equals("serial")))){
+        					 columnNames.add(rs.getString("COLUMN_NAME")); 
+        				 }
+        				
         			 }
         		 }else {
         			 int count =1;
@@ -237,7 +262,8 @@ public class QueryBuilder {
             }
         }
     }
-	public  List<Object> executeQuery(Class<?> clas,String query,Object... values) throws SQLException, MovieException  {
+    	
+	public  List<Object> executeQuery(Class<?> clas,String query,Object... values) throws SQLException  {
 
 	    	try (Connection connection = getConnection()) {
 	    		
@@ -251,15 +277,17 @@ public class QueryBuilder {
 	    	}    
 		}
 	
-	public void execute(String query, Object...values ) throws SQLException {
+	public void execute(String query, Object values ) throws SQLException {
 		
 		try (Connection connection = getConnection()) {
-    		PreparedStatement statement = connection.prepareStatement(query);
+    			PreparedStatement statement = connection.prepareStatement(query);
     		
-    		setValues(statement, values);
-    		
-    		statement.execute();
-		}
+				setValues(statement, values);
+				statement.execute();
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException | SQLException e) {
+			
+				e.printStackTrace();
+			}
 	}
 	
 	private void setValues(PreparedStatement statement,Object[] values) throws SQLException {
@@ -272,64 +300,78 @@ public class QueryBuilder {
 		}
 	}
 	
-	private List<Object> setObject(Class<?> objClass,ResultSet resultSet) throws MovieException {
+	
+	private List<Object> setObject(Class<?> objClass,ResultSet resultSet) {
+		List<Object> result = new ArrayList<Object>();
 		try {
 			ResultSetMetaData metaData = resultSet.getMetaData();
 			
-			List<String> columns = getColumnNames(usedColumns);
-			//get the number of columns from meta data
-			
-			int columnCount = metaData.getColumnCount();
-			
-			//get the column names
-			if(usedColumns.isEmpty()) {
-				for(int i=1;i<=columnCount;i++) {
-					columns.add(metaData.getColumnName(i));
-				}
-				
-			//if i have specific column then get that column alone
-			}else {
-				for(int column : usedColumns) {
-					columns.add(metaData.getColumnName(column));
-				}
-			}
+			List<String> columns = getColumnNames(tableName[0],usedColumns,false);
 			
 			//get the target class using reflection
+			List<Class<?>> columnType = getColumnType(metaData);
+			
 			Class<?> targetObj = Class.forName(objClass.getName());
 			
-			List<Object> result = new ArrayList<Object>();
 			
-		
+			
 			
 			//create a object for each entry
 			while(resultSet.next()) {
 				
 				Object obj = targetObj.getDeclaredConstructor().newInstance();
-				for(int i=0;i<columnCount;i++) {
+				
+				for(int i=0;i<columns.size();i++) {
 					
-					//get the column type
-					
-					Class<?> columnType =Class.forName(metaData.getColumnClassName(i+1));
-			
-					//get setter for that column using reflection
-					Method method = targetObj.getDeclaredMethod("set"+getCamelCase(columns.get(i)),columnType);
-					
-					//call the method to set value
+					//get the getter and invoke
+					Method method = targetObj.getDeclaredMethod("set"+getCamelCase(columns.get(i)),columnType.get(i));
+
 					method.invoke(obj,resultSet.getObject(i+1));
 				}	
 				
 				// add all the object in list
 				result.add(obj);
 			}
-			return result;
+			
 			
 		}catch(ClassNotFoundException| IllegalAccessException| IllegalArgumentException| InvocationTargetException| NoSuchMethodException| SecurityException| InstantiationException|SQLException e)  {
 			e.printStackTrace();
-			throw new MovieException(e.getStackTrace().toString());
+		
 		}
+			return result;
+		
 	}
 
+	private List<Class<?>> getColumnType(ResultSetMetaData metaData) throws SQLException, ClassNotFoundException {
+		
+		List<Class<?>> columnType = new   ArrayList<Class<?>>();
+		
+		if(usedColumns.isEmpty()) {
+			
+			int count = metaData.getColumnCount();
+			
+			for(int i=1;i<=count;i++) {
+				columnType.add(Class.forName(metaData.getColumnClassName(i)));
+			}
+			
+		}else {
+			for(int coulmn:usedColumns) {
+				columnType.add(Class.forName(metaData.getColumnClassName(coulmn)));
+			}
+		}
+		return columnType;
+	}
 
+	private void setValues(PreparedStatement statement,Object object) throws SQLException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+		List<String> columns = getColumnNames(tableName[0],usedColumns,true);
+	
+		for(int i=0;i<columns.size()+whereConditions.size();i++) {
+			Method method = object.getClass().getDeclaredMethod("get"+getCamelCase(columns.get(i)));
+			Object result = method.invoke(object);
+			statement.setObject(i+1,result);	
+		}
+	
+	}	
 	private String getCamelCase(String str) {
 		
 		

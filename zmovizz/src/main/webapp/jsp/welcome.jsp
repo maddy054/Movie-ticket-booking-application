@@ -1,3 +1,4 @@
+<%@page import="com.zmovizz.models.Location"%>
 <%@page import="com.zmovizz.persistance.DbConnector"%>
 <%@page import="com.zmovizz.models.User"%>
 <%@ page language="java" contentType="text/html; charset=UTF-8"
@@ -13,6 +14,9 @@
 <h3> Z Movizzzz</h3>
 <% DbConnector db = new DbConnector();
 String name = db.getUser(1).getName();
+Location loc = new Location();
+loc.setName("Aruppukottai");
+db.setLocation(loc);
 %>
 <h3> <%= name %></h3>
 </body>

@@ -11,6 +11,9 @@ public class Tester {
 		 System.out.println(connector.getUser(2).getName());	
 		 connector.getMovie(1);
 		 connector.getMovieList("Garudan");
+		 
+		connector.getLocation(1);
+		 
 		} catch (MovieException e) {	
 			System.err.println(e.getMessage());
 		}
